@@ -7,9 +7,9 @@ export async function POST(request: NextRequest) {
   try {
     const { identifier, password, store_id } = await request.json();
 
-    if (!identifier || !password) {
+    if (!identifier || !password || !store_id) {
       return NextResponse.json(
-        { error: "Credentials are required." },
+        { error: "Store, username, and password are required." },
         { status: 400 },
       );
     }
@@ -19,16 +19,15 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
 
-    // Find employees matching the identifier (username, email, or phone)
+    // Find employee matching the identifier within the selected store
     const trimmed = identifier.trim();
     const { data: matches, error } = await supabase
       .from("employees")
-      .select(
-        "id, name, username, phone, email, password_hash, store_id, is_active, stores(id, name)",
-      )
+      .select("id, name, username, phone, email, password_hash, store_id")
       .or(
         `username.eq."${trimmed}",email.eq."${trimmed}",phone.eq."${trimmed}"`,
       )
+      .eq("store_id", store_id)
       .eq("is_active", true);
 
     if (error || !matches || matches.length === 0) {
@@ -38,57 +37,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify password against each match and collect valid ones
-    const validEmployees: Array<{
-      id: number;
-      name: string;
-      store_id: number;
-      store_name: string;
-    }> = [];
+    // Verify password against each match (could be username + email matching same person)
+    let selected: { id: number; name: string; store_id: number } | null = null;
 
     for (const emp of matches) {
       const isValid = await bcrypt.compare(password, emp.password_hash);
       if (isValid) {
-        const store = emp.stores as unknown as {
-          id: number;
-          name: string;
-        } | null;
-        validEmployees.push({
-          id: emp.id,
-          name: emp.name,
-          store_id: emp.store_id,
-          store_name: store?.name || `Store #${emp.store_id}`,
-        });
+        selected = { id: emp.id, name: emp.name, store_id: emp.store_id };
+        break;
       }
     }
 
-    if (validEmployees.length === 0) {
+    if (!selected) {
       return NextResponse.json(
         { error: "Invalid credentials." },
         { status: 401 },
       );
-    }
-
-    // If store_id specified, pick that store
-    let selected = validEmployees[0];
-    if (store_id) {
-      const match = validEmployees.find((e) => e.store_id === store_id);
-      if (!match) {
-        return NextResponse.json(
-          { error: "Invalid store selection." },
-          { status: 400 },
-        );
-      }
-      selected = match;
-    } else if (validEmployees.length > 1) {
-      // Multiple stores — ask user to pick
-      return NextResponse.json({
-        needs_store_selection: true,
-        stores: validEmployees.map((e) => ({
-          store_id: e.store_id,
-          store_name: e.store_name,
-        })),
-      });
     }
 
     // Sign JWT token

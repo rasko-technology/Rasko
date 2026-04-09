@@ -1,7 +1,6 @@
 "use server";
 
-import { createClient } from "@/app/lib/supabase/server";
-import { requireStore } from "@/app/lib/auth";
+import { requireStore, createStoreClient } from "@/app/lib/auth";
 import { revalidatePath } from "next/cache";
 import type { FormState } from "@/app/lib/definitions";
 import { z } from "zod";
@@ -48,7 +47,7 @@ export async function createCustomer(
     return { errors: validated.error.flatten().fieldErrors };
   }
 
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
   const { data: newCustomer, error } = await supabase
     .from("customers")
     .insert({
@@ -116,7 +115,7 @@ export async function updateCustomer(
     return { errors: validated.error.flatten().fieldErrors };
   }
 
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
   const { error } = await supabase
     .from("customers")
     .update({
@@ -146,7 +145,7 @@ export async function updateCustomer(
 
 export async function deleteCustomer(id: number): Promise<FormState> {
   await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
   const { error } = await supabase.from("customers").delete().eq("id", id);
 
   if (error) {

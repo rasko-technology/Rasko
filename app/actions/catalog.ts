@@ -1,7 +1,6 @@
 "use server";
 
-import { createClient } from "@/app/lib/supabase/server";
-import { requireStore } from "@/app/lib/auth";
+import { requireStore, createStoreClient } from "@/app/lib/auth";
 import type { ServiceOptionType } from "@/constants/service_option_defaults";
 
 const VALID_TYPES: ServiceOptionType[] = [
@@ -22,7 +21,7 @@ export async function getProductDefaultOptions(
   }
 
   await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { data } = await supabase
     .from("catalog_product_options")

@@ -5,11 +5,19 @@ export default async function LeadSummaryPage() {
   const membership = await requireStore();
   const supabase = await createStoreClient();
 
-  const { data } = await supabase
-    .from("leads")
-    .select("*")
-    .eq("store_id", membership.store_id)
-    .order("created_at", { ascending: false });
+  const [{ data: leads }, { data: employees }] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("*, customers(id, name, phone, city)")
+      .eq("store_id", membership.store_id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("employees")
+      .select("id, name")
+      .eq("store_id", membership.store_id)
+      .eq("is_active", true)
+      .order("name"),
+  ]);
 
-  return <LeadSummary leads={data || []} />;
+  return <LeadSummary leads={leads || []} employees={employees || []} />;
 }

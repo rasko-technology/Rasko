@@ -173,7 +173,7 @@ export function ProductSearchInput({ onProductSelect, value }: Props) {
         <div className="absolute z-50 w-full mt-1 bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-xl shadow-xl max-h-72 overflow-y-auto animate-slide-up">
           {Object.entries(grouped).map(([category, products]) => (
             <div key={category}>
-              <div className="px-3 py-1.5 text-[10px] font-bold text-surface-400 uppercase tracking-wider bg-surface-50 dark:bg-surface-800/50 sticky top-0">
+              <div className="px-3 py-1.5 text-[10px] font-bold text-surface-400 uppercase tracking-wider bg-surface-50 dark:bg-surface-800/50">
                 {category}
               </div>
               {products.map((product) => {

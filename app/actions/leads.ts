@@ -1,74 +1,87 @@
-'use server'
+"use server";
 
-import { createClient } from '@/app/lib/supabase/server'
-import { requireStore } from '@/app/lib/auth'
-import { revalidatePath } from 'next/cache'
-import type { FormState } from '@/app/lib/definitions'
+import { requireStore, createStoreClient } from "@/app/lib/auth";
+import { revalidatePath } from "next/cache";
+import type { FormState } from "@/app/lib/definitions";
 
-export async function createLead(state: FormState, formData: FormData): Promise<FormState> {
-  const membership = await requireStore()
+export async function createLead(
+  state: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const membership = await requireStore();
 
-  const customer_name = formData.get('customer_name')?.toString()?.trim()
-  const phone = formData.get('phone')?.toString()?.trim()
-
-  if (!customer_name || !phone) {
-    return { message: 'Customer name and phone are required.' }
+  const customer_id = formData.get("customer_id")?.toString();
+  if (!customer_id) {
+    return { message: "Please select a customer." };
   }
 
-  const supabase = await createClient()
-  const { error } = await supabase.from('leads').insert({
+  const assigned_to = formData.get("assigned_to")?.toString();
+
+  let productRequirements = null;
+  try {
+    const raw = formData.get("product_requirements")?.toString();
+    if (raw) productRequirements = JSON.parse(raw);
+  } catch {
+    /* ignore */
+  }
+
+  const supabase = await createStoreClient();
+  const { error } = await supabase.from("leads").insert({
     store_id: membership.store_id,
-    customer_name,
-    phone,
-    email: formData.get('email')?.toString()?.trim() || null,
-    address: formData.get('address')?.toString()?.trim() || null,
-    item: formData.get('item')?.toString()?.trim() || null,
-    configuration: formData.get('configuration')?.toString()?.trim() || null,
-    quantity: parseInt(formData.get('quantity')?.toString() || '1') || 1,
-    payment_mode: formData.get('payment_mode')?.toString()?.trim() || null,
-    amount: parseFloat(formData.get('amount')?.toString() || '0') || null,
-    status: formData.get('status')?.toString() || 'new',
-    action_taken: formData.get('action_taken')?.toString()?.trim() || null,
-    notes: formData.get('notes')?.toString()?.trim() || null,
-    assigned_to: formData.get('assigned_to') ? parseInt(formData.get('assigned_to')!.toString()) : null,
-  })
+    customer_id: parseInt(customer_id),
+    user_type: formData.get("user_type")?.toString()?.trim() || null,
+    incoming_source:
+      formData.get("incoming_source")?.toString()?.trim() || null,
+    advance_amount:
+      parseFloat(formData.get("advance_amount")?.toString() || "0") || null,
+    priority: formData.get("priority")?.toString() || "medium",
+    booking_date_time: formData.get("booking_date_time")?.toString() || null,
+    payment_mode: formData.get("payment_mode")?.toString()?.trim() || null,
+    product_requirements: productRequirements,
+    status: "new",
+    notes: formData.get("notes")?.toString()?.trim() || null,
+    assigned_to: assigned_to ? parseInt(assigned_to) : null,
+  });
 
   if (error) {
-    console.error('Lead creation error:', error)
-    return { message: 'Failed to create lead.' }
+    console.error("Lead creation error:", error);
+    return { message: "Failed to create lead." };
   }
 
-  revalidatePath('/dashboard/leads')
-  return { success: true, message: 'Lead created successfully.' }
+  revalidatePath("/dashboard/leads");
+  return { success: true, message: "Lead created successfully." };
 }
 
-export async function updateLeadStatus(id: number, status: string): Promise<FormState> {
-  await requireStore()
-  const supabase = await createClient()
+export async function updateLeadStatus(
+  id: number,
+  status: string,
+): Promise<FormState> {
+  await requireStore();
+  const supabase = await createStoreClient();
 
   const { error } = await supabase
-    .from('leads')
+    .from("leads")
     .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', id)
+    .eq("id", id);
 
   if (error) {
-    return { message: 'Failed to update status.' }
+    return { message: "Failed to update status." };
   }
 
-  revalidatePath('/dashboard/leads')
-  return { success: true }
+  revalidatePath("/dashboard/leads");
+  return { success: true };
 }
 
 export async function deleteLead(id: number): Promise<FormState> {
-  await requireStore()
-  const supabase = await createClient()
+  await requireStore();
+  const supabase = await createStoreClient();
 
-  const { error } = await supabase.from('leads').delete().eq('id', id)
+  const { error } = await supabase.from("leads").delete().eq("id", id);
 
   if (error) {
-    return { message: 'Failed to delete lead.' }
+    return { message: "Failed to delete lead." };
   }
 
-  revalidatePath('/dashboard/leads')
-  return { success: true, message: 'Lead deleted.' }
+  revalidatePath("/dashboard/leads");
+  return { success: true, message: "Lead deleted." };
 }

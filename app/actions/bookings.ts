@@ -1,7 +1,6 @@
 "use server";
 
-import { createClient } from "@/app/lib/supabase/server";
-import { requireStore } from "@/app/lib/auth";
+import { requireStore, createStoreClient } from "@/app/lib/auth";
 import { revalidatePath } from "next/cache";
 import type { FormState } from "@/app/lib/definitions";
 
@@ -10,7 +9,7 @@ export async function createBooking(
   formData: FormData,
 ): Promise<FormState> {
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   // Product fields
   const product_name = formData.get("product_name")?.toString()?.trim();
@@ -93,7 +92,7 @@ export async function updateBookingStatus(
   status: string,
 ): Promise<FormState> {
   await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { error } = await supabase
     .from("bookings")
@@ -110,7 +109,7 @@ export async function updateBookingStatus(
 
 export async function deleteBooking(id: number): Promise<FormState> {
   await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { error } = await supabase.from("bookings").delete().eq("id", id);
 
@@ -124,7 +123,7 @@ export async function deleteBooking(id: number): Promise<FormState> {
 
 export async function confirmBooking(id: number): Promise<FormState> {
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   // Fetch booking with customer details
   const { data: booking, error: fetchError } = await supabase

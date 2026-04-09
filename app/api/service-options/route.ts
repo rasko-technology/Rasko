@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/app/lib/supabase/server";
-import { requireStore } from "@/app/lib/auth";
+import { requireStore, createStoreClient } from "@/app/lib/auth";
 
 // GET /api/service-options?type=default_issue,items_received,additional_requirement
 export async function GET(request: NextRequest) {
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const types = request.nextUrl.searchParams.get("type")?.split(",") || [];
 

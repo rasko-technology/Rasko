@@ -1,12 +1,11 @@
 "use server";
 
-import { createClient } from "@/app/lib/supabase/server";
-import { requireStore } from "@/app/lib/auth";
+import { requireStore, createStoreClient } from "@/app/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function addServiceItem(catalogProductId: number) {
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { data: serviceItem, error } = await supabase
     .from("store_service_items")
@@ -66,7 +65,7 @@ export async function addServiceItem(catalogProductId: number) {
 
 export async function removeServiceItem(id: number) {
   await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { error } = await supabase
     .from("store_service_items")
@@ -93,7 +92,7 @@ export async function addCustomProduct(name: string, categoryName?: string) {
   }
 
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { error } = await supabase.from("store_service_items").insert({
     store_id: membership.store_id,
@@ -119,7 +118,7 @@ export async function addCustomBrand(catalogProductId: number, name: string) {
   }
 
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { error } = await supabase.from("store_custom_brands").insert({
     store_id: membership.store_id,
@@ -148,7 +147,7 @@ export async function addCustomProductBrand(
   }
 
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { error } = await supabase.from("store_custom_brands").insert({
     store_id: membership.store_id,
@@ -169,7 +168,7 @@ export async function addCustomProductBrand(
 
 export async function removeCustomBrand(id: number) {
   await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { error } = await supabase
     .from("store_custom_brands")

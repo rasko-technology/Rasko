@@ -1,5 +1,4 @@
-import { createClient } from "@/app/lib/supabase/server";
-import { requireStore } from "@/app/lib/auth";
+import { requireStore, createStoreClient } from "@/app/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -10,7 +9,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json([]);
   }
 
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { data, error } = await supabase
     .from("catalog_products")

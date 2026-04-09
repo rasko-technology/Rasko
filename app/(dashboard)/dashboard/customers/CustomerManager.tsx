@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useCallback, useActionState } from "react";
-import { createCustomer, deleteCustomer } from "@/app/actions/customers";
+import {
+  createCustomer,
+  updateCustomer,
+  deleteCustomer,
+} from "@/app/actions/customers";
 import { LocationPicker } from "@/app/components/booking/LocationPicker";
 import { ConfirmDialog, AlertDialog } from "@/app/components/ui/Dialog";
 
@@ -31,6 +35,14 @@ export function CustomerManager({ customers }: { customers: Customer[] }) {
   const [addressLat, setAddressLat] = useState<number | null>(null);
   const [addressLng, setAddressLng] = useState<number | null>(null);
   const [fullAddress, setFullAddress] = useState("");
+
+  // Edit state
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<Record<string, string>>({});
+  const [editPending, setEditPending] = useState(false);
+  const [editMsg, setEditMsg] = useState<{ text: string; ok: boolean } | null>(
+    null,
+  );
 
   // Confirm & alert dialogs
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -111,6 +123,43 @@ export function CustomerManager({ customers }: { customers: Customer[] }) {
         setNativeValue(pincodeInput, location.pincode);
     },
     [],
+  );
+
+  const startEdit = useCallback((customer: Customer) => {
+    setEditingId(customer.id);
+    setEditForm({
+      name: customer.name || "",
+      phone: customer.phone || "",
+      email: customer.email || "",
+      address: customer.address || "",
+      landmark: customer.landmark || "",
+      city: customer.city || "",
+      pincode: customer.pincode || "",
+      gst_number: customer.gst_number || "",
+      notes: customer.notes || "",
+    });
+    setEditMsg(null);
+  }, []);
+
+  const handleEditSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (!editingId) return;
+      setEditPending(true);
+      setEditMsg(null);
+
+      const formData = new FormData(e.currentTarget);
+      const result = await updateCustomer(editingId, undefined, formData);
+      setEditPending(false);
+
+      if (result?.success) {
+        setEditMsg({ text: result.message || "Updated.", ok: true });
+        setEditingId(null);
+      } else {
+        setEditMsg({ text: result?.message || "Failed to update.", ok: false });
+      }
+    },
+    [editingId],
   );
 
   const filtered = customers.filter((c) => {
@@ -441,6 +490,32 @@ export function CustomerManager({ customers }: { customers: Customer[] }) {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (editingId === customer.id) {
+                          setEditingId(null);
+                        } else {
+                          startEdit(customer);
+                        }
+                      }}
+                      className="p-2 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 text-surface-400 hover:text-primary-600 transition-colors cursor-pointer"
+                      title="Edit customer"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
                         handleDeleteClick({
                           id: customer.id,
                           name: customer.name,
@@ -478,6 +553,180 @@ export function CustomerManager({ customers }: { customers: Customer[] }) {
                     </svg>
                   </div>
                 </div>
+
+                {/* Edit form */}
+                {editingId === customer.id && (
+                  <div className="px-5 pb-5 border-t border-surface-100 dark:border-surface-800 pt-4 animate-slide-up">
+                    {editMsg && (
+                      <div
+                        className={`mb-3 p-3 rounded-lg text-sm ${editMsg.ok ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}
+                      >
+                        {editMsg.text}
+                      </div>
+                    )}
+                    <form onSubmit={handleEditSubmit} className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-surface-500 mb-1">
+                            Name *
+                          </label>
+                          <input
+                            name="name"
+                            value={editForm.name || ""}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, name: e.target.value })
+                            }
+                            required
+                            className="w-full px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-surface-500 mb-1">
+                            Phone
+                          </label>
+                          <input
+                            name="phone"
+                            value={editForm.phone || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                phone: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-surface-500 mb-1">
+                          Email
+                        </label>
+                        <input
+                          name="email"
+                          type="email"
+                          value={editForm.email || ""}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, email: e.target.value })
+                          }
+                          className="w-full px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-surface-500 mb-1">
+                            Address
+                          </label>
+                          <input
+                            name="address"
+                            value={editForm.address || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                address: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-surface-500 mb-1">
+                            Landmark
+                          </label>
+                          <input
+                            name="landmark"
+                            value={editForm.landmark || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                landmark: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-surface-500 mb-1">
+                            City
+                          </label>
+                          <input
+                            name="city"
+                            value={editForm.city || ""}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, city: e.target.value })
+                            }
+                            className="w-full px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-surface-500 mb-1">
+                            Pincode
+                          </label>
+                          <input
+                            name="pincode"
+                            value={editForm.pincode || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                pincode: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-surface-500 mb-1">
+                            GST Number
+                          </label>
+                          <input
+                            name="gst_number"
+                            value={editForm.gst_number || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                gst_number: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-surface-500 mb-1">
+                            Notes
+                          </label>
+                          <input
+                            name="notes"
+                            value={editForm.notes || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                notes: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="submit"
+                          disabled={editPending}
+                          className="px-5 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                          {editPending ? "Saving..." : "Save Changes"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="px-5 py-2 rounded-lg bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-400 text-sm font-medium hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
 
                 {/* Expanded details */}
                 {isExpanded && (

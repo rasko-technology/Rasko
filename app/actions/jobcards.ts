@@ -1,7 +1,6 @@
 "use server";
 
-import { createClient } from "@/app/lib/supabase/server";
-import { requireStore } from "@/app/lib/auth";
+import { requireStore, createStoreClient } from "@/app/lib/auth";
 import { revalidatePath } from "next/cache";
 import type { FormState } from "@/app/lib/definitions";
 
@@ -18,7 +17,7 @@ export async function createJobcard(
   formData: FormData,
 ): Promise<FormState> {
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const customerName = formData.get("customer_name") as string;
   if (!customerName?.trim()) {
@@ -103,7 +102,7 @@ export async function updateJobcard(
   formData: FormData,
 ): Promise<FormState> {
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const id = formData.get("id") as string;
   if (!id) return { message: "Job card ID is required." };
@@ -225,7 +224,7 @@ export async function updateJobcardStatus(
   status: string,
 ): Promise<FormState> {
   await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { error } = await supabase
     .from("jobcards")

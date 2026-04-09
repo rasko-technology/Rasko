@@ -1,7 +1,6 @@
 "use server";
 
-import { createClient } from "@/app/lib/supabase/server";
-import { requireStore } from "@/app/lib/auth";
+import { requireStore, createStoreClient } from "@/app/lib/auth";
 import { revalidatePath } from "next/cache";
 import type { ServiceOptionType } from "@/constants/service_option_defaults";
 
@@ -42,7 +41,7 @@ export async function createServiceOption(
   }
 
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const row: Record<string, unknown> = {
     store_id: membership.store_id,
@@ -72,7 +71,7 @@ export async function updateServiceOption(id: number, name: string) {
   }
 
   await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { data: existing } = await supabase
     .from("store_service_options")
@@ -104,7 +103,7 @@ export async function updateServiceOption(id: number, name: string) {
 
 export async function toggleServiceOption(id: number, isActive: boolean) {
   await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { data: existing } = await supabase
     .from("store_service_options")
@@ -133,7 +132,7 @@ export async function toggleServiceOption(id: number, isActive: boolean) {
 
 export async function deleteServiceOption(id: number) {
   await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const { data: existing } = await supabase
     .from("store_service_options")
@@ -174,7 +173,7 @@ export async function bulkImportServiceOptions(
   }
 
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   // Fetch existing names to avoid duplicate key errors
   let query = supabase

@@ -62,6 +62,19 @@
   to { opacity: 1; transform: scale(1); }
 }
 
+@layer utilities {
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}
+
 /* Base styles */
 body {
   font-family: var(--font-sans);

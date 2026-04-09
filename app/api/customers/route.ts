@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/app/lib/supabase/server";
-import { requireStore } from "@/app/lib/auth";
+import { requireStore, createStoreClient } from "@/app/lib/auth";
 
 // GET /api/customers — list all customers (supports ?search= query)
 export async function GET(request: NextRequest) {
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
 
   const search = request.nextUrl.searchParams.get("search");
 
@@ -19,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   if (search) {
     query = query.or(
-      `name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%,city.ilike.%${search}%`,
+      `name.ilike."%${search}%",phone.ilike."%${search}%",email.ilike."%${search}%",city.ilike."%${search}%"`,
     );
   }
 
@@ -41,7 +40,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
   const { data, error } = await supabase
     .from("customers")
     .insert({

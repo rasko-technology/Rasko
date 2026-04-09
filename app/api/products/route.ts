@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/app/lib/supabase/server";
-import { requireStore } from "@/app/lib/auth";
+import { requireStore, createStoreClient } from "@/app/lib/auth";
 
 // GET /api/products?search=<term> — returns products the store has added via store_service_items
 export async function GET(request: NextRequest) {
   const membership = await requireStore();
-  const supabase = await createClient();
+  const supabase = await createStoreClient();
   const search = request.nextUrl.searchParams
     .get("search")
     ?.toLowerCase()
