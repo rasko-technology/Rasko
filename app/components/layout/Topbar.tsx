@@ -1,15 +1,18 @@
 "use client";
 
 import { signOut } from "@/app/actions/auth";
+import Image from "next/image";
 import { useState } from "react";
 
 export function Topbar({
   userEmail,
   storeName,
+  storeLogo,
   isEmployee = false,
 }: {
   userEmail: string;
   storeName: string;
+  storeLogo?: string | null;
   isEmployee?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
@@ -27,7 +30,17 @@ export function Topbar({
       {/* Mobile logo */}
       <div className="flex items-center gap-3 lg:hidden">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-          <span className="text-white font-bold text-xs">R</span>
+          {storeLogo ? (
+            <Image
+              src={storeLogo}
+              alt={`${storeName} logo`}
+              width={18}
+              height={18}
+              className="w-6 h-6 object-cover"
+            />
+          ) : (
+            <span className="text-white font-bold text-sm">R</span>
+          )}
         </div>
         <span className="text-sm font-semibold text-surface-900 dark:text-white">
           {storeName}
@@ -83,10 +96,20 @@ export function Topbar({
             onClick={() => setShowMenu(!showMenu)}
             className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-              <span className="text-white text-xs font-semibold">
-                {userEmail.charAt(0).toUpperCase()}
-              </span>
+            <div className="w-9 h-9 rounded-full border-2 border-black dark:border-white flex items-center justify-center bg-primary-50">
+              {storeLogo ? (
+                <Image
+                  src={storeLogo}
+                  alt={`${storeName} Logo`}
+                  className="object-cover w-full h-full rounded-full"
+                  width={36}
+                  height={36}
+                />
+              ) : (
+                <span className="text-white text-xs font-semibold">
+                  {userEmail.charAt(0).toUpperCase()}
+                </span>
+              )}
             </div>
             <svg
               className="w-4 h-4 text-surface-400 hidden sm:block"

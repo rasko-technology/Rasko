@@ -119,13 +119,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Filter by search term
+  // Filter by search term (used by legacy callers; SWR loads all and filters client-side)
   if (search && search.length >= 1) {
     const filtered = results.filter((p) =>
       p.productName.toLowerCase().includes(search),
     );
-    return NextResponse.json(filtered.slice(0, 20));
+    return NextResponse.json(filtered);
   }
 
-  return NextResponse.json(results.slice(0, 20));
+  return NextResponse.json(results);
 }

@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
   const membership = await requireStore();
   const formData = await request.formData();
   const files = formData.getAll("files") as File[];
+  const folder = formData.get("folder")?.toString() || "jobcards";
 
   if (files.length === 0 || files.length > 10) {
     return NextResponse.json({ error: "Provide 1-10 files" }, { status: 400 });
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ext = file.name.split(".").pop() || "jpg";
-    const key = `jobcards/${membership.store_id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const key = `${folder}/${membership.store_id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
     await s3.send(
@@ -73,7 +74,8 @@ export async function DELETE(request: NextRequest) {
   }
 
   // Ensure the key belongs to the caller's store
-  if (!key.startsWith(`jobcards/${membership.store_id}/`)) {
+  const storePrefix = `/${membership.store_id}/`;
+  if (!key.includes(storePrefix)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -340,18 +340,27 @@ export function LeadSummary({ leads, employees }: Props) {
                         {formatDate(lead.created_at)}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(
-                              lead.id,
-                              lead.customers?.name || "Unknown",
-                            );
-                          }}
-                          className="px-2.5 py-1 rounded-lg border border-danger/30 text-xs font-medium text-danger hover:bg-danger/10 transition-colors cursor-pointer"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Link
+                            href={`/dashboard/leads/${lead.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="px-2.5 py-1 rounded-lg border border-primary-300 dark:border-primary-500/30 text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors"
+                          >
+                            Edit
+                          </Link>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(
+                                lead.id,
+                                lead.customers?.name || "Unknown",
+                              );
+                            }}
+                            className="px-2.5 py-1 rounded-lg border border-danger/30 text-xs font-medium text-danger hover:bg-danger/10 transition-colors cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     {expandedId === lead.id && (

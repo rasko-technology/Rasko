@@ -17,6 +17,8 @@ import { ProductSearchInput } from "@/app/components/booking/ProductSearchInput"
 import { BrandSelect } from "@/app/components/booking/BrandSelect";
 import { Dialog } from "@/app/components/ui/Dialog";
 import { LocationPicker } from "@/app/components/booking/LocationPicker";
+import { useCustomerSearch } from "@/app/hooks/use-customers";
+import { useDebouncedValue } from "@/app/hooks/use-debounced-value";
 
 interface ServiceOption {
   id: number;
@@ -53,14 +55,14 @@ export function JobCardForm({ employees, serviceOptions }: Props) {
 
   // Customer search
   const [customerQuery, setCustomerQuery] = useState("");
-  const [customerResults, setCustomerResults] = useState<CustomerResult[]>([]);
   const [customerOpen, setCustomerOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] =
     useState<CustomerResult | null>(null);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
-  const [customerLoading, setCustomerLoading] = useState(false);
   const customerWrapperRef = useRef<HTMLDivElement>(null);
-  const customerDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const debouncedCustomerQuery = useDebouncedValue(customerQuery, 300);
+  const { customers: customerResults, isLoading: customerLoading } =
+    useCustomerSearch(debouncedCustomerQuery);
 
   // New customer form (dialog)
   const [custFormState, custFormAction, custFormPending] = useActionState(
@@ -179,38 +181,14 @@ export function JobCardForm({ employees, serviceOptions }: Props) {
     }
   }, [state, router]);
 
-  const fetchCustomers = useCallback(async (search: string) => {
-    setCustomerLoading(true);
-    try {
-      const res = await fetch(
-        `/api/customers?search=${encodeURIComponent(search)}`,
-      );
-      const data = await res.json();
-      setCustomerResults(Array.isArray(data) ? data : []);
-      setCustomerOpen(true);
-    } catch {
-      setCustomerResults([]);
-    } finally {
-      setCustomerLoading(false);
-    }
-  }, []);
-
+  // Open dropdown when SWR results arrive
   useEffect(() => {
-    if (customerDebounceRef.current) clearTimeout(customerDebounceRef.current);
-    if (customerQuery.length >= 2) {
-      customerDebounceRef.current = setTimeout(
-        () => fetchCustomers(customerQuery),
-        300,
-      );
-    } else {
-      setCustomerResults([]);
+    if (debouncedCustomerQuery.length >= 2 && customerResults.length > 0) {
+      setCustomerOpen(true);
+    } else if (debouncedCustomerQuery.length < 2) {
       setCustomerOpen(false);
     }
-    return () => {
-      if (customerDebounceRef.current)
-        clearTimeout(customerDebounceRef.current);
-    };
-  }, [customerQuery, fetchCustomers]);
+  }, [customerResults, debouncedCustomerQuery]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -455,8 +433,11 @@ export function JobCardForm({ employees, serviceOptions }: Props) {
                       value={customerQuery}
                       onChange={(e) => setCustomerQuery(e.target.value)}
                       onFocus={() => {
-                        if (customerQuery.length >= 2)
-                          fetchCustomers(customerQuery);
+                        if (
+                          customerQuery.length >= 2 &&
+                          customerResults.length > 0
+                        )
+                          setCustomerOpen(true);
                       }}
                       autoComplete="off"
                       className={inputClass}

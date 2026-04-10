@@ -4,6 +4,7 @@ import { createAdminClient } from "@/app/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/app/components/layout/Sidebar";
 import { Topbar } from "@/app/components/layout/Topbar";
+import { SWRProvider } from "@/app/lib/swr-provider";
 
 export default async function DashboardLayout({
   children,
@@ -26,19 +27,24 @@ export default async function DashboardLayout({
     };
 
     return (
-      <div className="flex h-screen overflow-hidden bg-surface-50 dark:bg-surface-950">
-        <Sidebar storeName={store.name} isEmployee={false} />
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <Topbar
-            userEmail={user.email || ""}
-            storeName={store.name}
-            isEmployee={false}
-          />
-          <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-            <div className="mx-auto max-w-7xl animate-fade-in">{children}</div>
-          </main>
+      <SWRProvider>
+        <div className="flex h-screen overflow-hidden bg-surface-50 dark:bg-surface-950">
+          <Sidebar storeName={store.name} storeLogo={store.logo_url} isEmployee={false} />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Topbar
+              userEmail={user.email || ""}
+              storeName={store.name}
+              storeLogo={store.logo_url}
+              isEmployee={false}
+            />
+            <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+              <div className="mx-auto max-w-7xl animate-fade-in">
+                {children}
+              </div>
+            </main>
+          </div>
         </div>
-      </div>
+      </SWRProvider>
     );
   }
 
@@ -52,25 +58,28 @@ export default async function DashboardLayout({
   const supabase = createAdminClient();
   const { data: store } = await supabase
     .from("stores")
-    .select("id, name")
+    .select("id, name, logo_url")
     .eq("id", employee.store_id)
     .single();
 
   const storeName = store?.name || "Store";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface-50 dark:bg-surface-950">
-      <Sidebar storeName={storeName} isEmployee={true} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Topbar
-          userEmail={employee.name}
-          storeName={storeName}
-          isEmployee={true}
-        />
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl animate-fade-in">{children}</div>
-        </main>
+    <SWRProvider>
+      <div className="flex h-screen overflow-hidden bg-surface-50 dark:bg-surface-950">
+        <Sidebar storeName={storeName} storeLogo={store?.logo_url || null} isEmployee={true} />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Topbar
+            userEmail={employee.name}
+            storeName={storeName}
+            storeLogo={store?.logo_url || null}
+            isEmployee={true}
+          />
+          <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div className="mx-auto max-w-7xl animate-fade-in">{children}</div>
+          </main>
+        </div>
       </div>
-    </div>
+    </SWRProvider>
   );
 }

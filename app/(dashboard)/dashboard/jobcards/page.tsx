@@ -9,6 +9,8 @@ const STATUS_COLORS: Record<string, string> = {
     "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400",
   closed:
     "bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-500",
+  forwarded:
+    "bg-purple-50 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {

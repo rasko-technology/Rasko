@@ -1,91 +1,81 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react";
+import { useCustomerSearch } from "@/app/hooks/use-customers";
+import { useDebouncedValue } from "@/app/hooks/use-debounced-value";
 
 interface CustomerResult {
-  id: number
-  name: string
-  phone: string | null
-  email: string | null
-  address: string | null
-  landmark: string | null
-  city: string | null
-  pincode: string | null
-  gst_number: string | null
-  notes: string | null
+  id: number;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  landmark: string | null;
+  city: string | null;
+  pincode: string | null;
+  gst_number: string | null;
+  notes: string | null;
 }
 
 interface Props {
-  onCustomerSelect: (customer: CustomerResult) => void
-  onNewCustomer: () => void
+  onCustomerSelect: (customer: CustomerResult) => void;
+  onNewCustomer: () => void;
 }
 
 export function CustomerSearch({ onCustomerSelect, onNewCustomer }: Props) {
-  const [query, setQuery] = useState("")
-  const [results, setResults] = useState<CustomerResult[]>([])
-  const [isOpen, setIsOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [highlightIndex, setHighlightIndex] = useState(-1)
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const fetchCustomers = useCallback(async (searchTerm: string) => {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/customers?search=${encodeURIComponent(searchTerm)}`)
-      const data = await res.json()
-      setResults(Array.isArray(data) ? data : [])
-      setIsOpen(true)
-      setHighlightIndex(-1)
-    } catch {
-      setResults([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const { customers: results, isLoading: loading } =
+    useCustomerSearch(debouncedQuery);
 
+  // Open dropdown when results arrive
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (query.length >= 2) {
-      debounceRef.current = setTimeout(() => fetchCustomers(query), 300)
-    } else {
-      setResults([])
-      setIsOpen(false)
+    if (debouncedQuery.length >= 2 && results.length > 0) {
+      setIsOpen(true);
+      setHighlightIndex(-1);
+    } else if (debouncedQuery.length < 2) {
+      setIsOpen(false);
     }
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [query, fetchCustomers])
+  }, [results, debouncedQuery]);
 
   // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
-  }, [])
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (!isOpen) return
-    const totalItems = results.length + 1 // +1 for "New Customer" option
+    if (!isOpen) return;
+    const totalItems = results.length + 1; // +1 for "New Customer" option
     if (e.key === "ArrowDown") {
-      e.preventDefault()
-      setHighlightIndex((prev) => Math.min(prev + 1, totalItems - 1))
+      e.preventDefault();
+      setHighlightIndex((prev) => Math.min(prev + 1, totalItems - 1));
     } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      setHighlightIndex((prev) => Math.max(prev - 1, 0))
+      e.preventDefault();
+      setHighlightIndex((prev) => Math.max(prev - 1, 0));
     } else if (e.key === "Enter" && highlightIndex >= 0) {
-      e.preventDefault()
+      e.preventDefault();
       if (highlightIndex < results.length) {
-        onCustomerSelect(results[highlightIndex])
+        onCustomerSelect(results[highlightIndex]);
       } else {
-        onNewCustomer()
+        onNewCustomer();
       }
-      setIsOpen(false)
-      setQuery("")
+      setIsOpen(false);
+      setQuery("");
     } else if (e.key === "Escape") {
-      setIsOpen(false)
+      setIsOpen(false);
     }
   }
 
@@ -94,15 +84,24 @@ export function CustomerSearch({ onCustomerSelect, onNewCustomer }: Props) {
       <div className="relative">
         <svg
           className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400"
-          fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+          />
         </svg>
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => { if (query.length >= 2) fetchCustomers(query) }}
+          onFocus={() => {
+            if (query.length >= 2 && results.length > 0) setIsOpen(true);
+          }}
           onKeyDown={handleKeyDown}
           placeholder="Search customer by name, phone, or email..."
           autoComplete="off"
@@ -128,9 +127,9 @@ export function CustomerSearch({ onCustomerSelect, onNewCustomer }: Props) {
               key={customer.id}
               type="button"
               onClick={() => {
-                onCustomerSelect(customer)
-                setIsOpen(false)
-                setQuery("")
+                onCustomerSelect(customer);
+                setIsOpen(false);
+                setQuery("");
               }}
               className={`w-full text-left px-4 py-3 transition-colors cursor-pointer ${
                 idx === highlightIndex
@@ -140,18 +139,26 @@ export function CustomerSearch({ onCustomerSelect, onNewCustomer }: Props) {
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs font-semibold">{customer.name.charAt(0).toUpperCase()}</span>
+                  <span className="text-white text-xs font-semibold">
+                    {customer.name.charAt(0).toUpperCase()}
+                  </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{customer.name}</p>
+                  <p className="text-sm font-medium text-surface-900 dark:text-white truncate">
+                    {customer.name}
+                  </p>
                   <div className="flex items-center gap-2 text-xs text-surface-400">
                     {customer.phone && <span>{customer.phone}</span>}
                     {customer.phone && customer.email && <span>·</span>}
-                    {customer.email && <span className="truncate">{customer.email}</span>}
+                    {customer.email && (
+                      <span className="truncate">{customer.email}</span>
+                    )}
                   </div>
                 </div>
                 {customer.city && (
-                  <span className="text-xs text-surface-400 flex-shrink-0">{customer.city}</span>
+                  <span className="text-xs text-surface-400 flex-shrink-0">
+                    {customer.city}
+                  </span>
                 )}
               </div>
             </button>
@@ -169,9 +176,9 @@ export function CustomerSearch({ onCustomerSelect, onNewCustomer }: Props) {
             <button
               type="button"
               onClick={() => {
-                onNewCustomer()
-                setIsOpen(false)
-                setQuery("")
+                onNewCustomer();
+                setIsOpen(false);
+                setQuery("");
               }}
               className={`w-full text-left px-4 py-3 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors cursor-pointer flex items-center gap-2 ${
                 highlightIndex === results.length
@@ -179,8 +186,18 @@ export function CustomerSearch({ onCustomerSelect, onNewCustomer }: Props) {
                   : ""
               }`}
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
+                />
               </svg>
               + Create New Customer
             </button>
@@ -188,5 +205,5 @@ export function CustomerSearch({ onCustomerSelect, onNewCustomer }: Props) {
         </div>
       )}
     </div>
-  )
+  );
 }

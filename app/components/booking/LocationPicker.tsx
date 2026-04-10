@@ -317,7 +317,7 @@ export function LocationPicker({ onLocationSelect, initialCenter }: Props) {
       </div>
 
       {/* Selected address display */}
-      {selectedAddress && (
+      {/* {selectedAddress && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700">
           <svg
             className="w-4 h-4 text-primary-500 shrink-0"
@@ -341,7 +341,7 @@ export function LocationPicker({ onLocationSelect, initialCenter }: Props) {
             {selectedAddress}
           </span>
         </div>
-      )}
+      )} */}
 
       {/* Map */}
       <div className="rounded-xl overflow-hidden border border-surface-200 dark:border-surface-700 shadow-sm">

@@ -1,14 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-
-interface ProductResult {
-  serviceItemId: number;
-  productName: string;
-  brandNames: string[];
-  issues: string[];
-  category: string;
-}
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useProducts, type ProductResult } from "@/app/hooks/use-products";
+import { useDebouncedValue } from "@/app/hooks/use-debounced-value";
 
 interface Props {
   onProductSelect: (product: ProductResult) => void;
@@ -17,44 +11,35 @@ interface Props {
 
 export function ProductSearchInput({ onProductSelect, value }: Props) {
   const [query, setQuery] = useState(value || "");
-  const [results, setResults] = useState<ProductResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const hasAutoSelected = useRef(false);
   const justSelected = useRef(false);
 
-  const fetchProducts = useCallback(async (searchTerm: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/products?search=${encodeURIComponent(searchTerm)}`,
-      );
-      const data = await res.json();
-      setResults(data);
+  const { products, isLoading } = useProducts();
+  const debouncedQuery = useDebouncedValue(query, 150);
+
+  // Client-side filter
+  const results = useMemo(() => {
+    if (debouncedQuery.length < 1) return [];
+    const q = debouncedQuery.toLowerCase();
+    return products.filter((p) => p.productName.toLowerCase().includes(q));
+  }, [products, debouncedQuery]);
+
+  // Open dropdown when results change and query is active
+  useEffect(() => {
+    if (
+      debouncedQuery.length >= 1 &&
+      results.length > 0 &&
+      !justSelected.current
+    ) {
       setIsOpen(true);
       setHighlightIndex(-1);
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (query.length >= 1) {
-      debounceRef.current = setTimeout(() => fetchProducts(query), 250);
-    } else {
-      setResults([]);
+    } else if (debouncedQuery.length < 1) {
       setIsOpen(false);
     }
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [query, fetchProducts]);
+  }, [results, debouncedQuery]);
 
   // Close on outside click
   useEffect(() => {
@@ -72,27 +57,16 @@ export function ProductSearchInput({ onProductSelect, value }: Props) {
 
   // Auto-trigger onProductSelect on mount when value is pre-filled (edit mode)
   useEffect(() => {
-    if (!value || hasAutoSelected.current) return;
-    async function autoSelect() {
-      try {
-        const res = await fetch(
-          `/api/products?search=${encodeURIComponent(value!)}`,
-        );
-        const data: ProductResult[] = await res.json();
-        const match = data.find(
-          (p) => p.productName.toLowerCase() === value!.toLowerCase(),
-        );
-        if (match) {
-          hasAutoSelected.current = true;
-          justSelected.current = true;
-          onProductSelect(match);
-        }
-      } catch {
-        // ignore
-      }
+    if (!value || hasAutoSelected.current || products.length === 0) return;
+    const match = products.find(
+      (p) => p.productName.toLowerCase() === value.toLowerCase(),
+    );
+    if (match) {
+      hasAutoSelected.current = true;
+      justSelected.current = true;
+      onProductSelect(match);
     }
-    autoSelect();
-  }, [value, onProductSelect]);
+  }, [value, products, onProductSelect]);
 
   function handleSelect(product: ProductResult) {
     setQuery(product.productName);
@@ -155,14 +129,14 @@ export function ProductSearchInput({ onProductSelect, value }: Props) {
               justSelected.current = false;
               return;
             }
-            if (query.length >= 1) fetchProducts(query);
+            if (query.length >= 1 && results.length > 0) setIsOpen(true);
           }}
           onKeyDown={handleKeyDown}
           placeholder="Search for a product..."
           autoComplete="off"
           className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white placeholder-surface-400 focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
         />
-        {loading && (
+        {isLoading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
             <div className="w-4 h-4 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
           </div>
@@ -205,7 +179,7 @@ export function ProductSearchInput({ onProductSelect, value }: Props) {
         </div>
       )}
 
-      {isOpen && query.length >= 1 && results.length === 0 && !loading && (
+      {isOpen && query.length >= 1 && results.length === 0 && !isLoading && (
         <div className="absolute z-50 w-full mt-1 bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-xl shadow-xl p-4 text-center text-sm text-surface-400">
           No products found for &ldquo;{query}&rdquo;
         </div>

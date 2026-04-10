@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -246,9 +247,11 @@ function CollapsibleSection({
 
 export function Sidebar({
   storeName,
+  storeLogo,
   isEmployee = false,
 }: {
   storeName: string;
+  storeLogo?: string | null;
   isEmployee?: boolean;
 }) {
   const pathname = usePathname();
@@ -262,15 +265,25 @@ export function Sidebar({
     <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-surface-200 dark:border-surface-800">
-        <div className="w-9 h-9 rounded-xl bg-linear-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/20">
-          <span className="text-white font-bold text-sm">R</span>
+        <div className="w-9 h-9 rounded-xl border-2 border-black dark:border-white flex items-center justify-center bg-primary-50">
+          {storeLogo ? (
+            <Image
+              src={storeLogo}
+              alt={`${storeName} Logo`}
+              className="object-cover w-full h-full rounded-xl"
+              width={36}
+              height={36}
+            />
+          ) : (
+            <span className="text-white font-bold text-sm">R</span>
+          )}
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-surface-900 dark:text-white truncate">
             {storeName}
           </p>
           <p className="text-xs text-surface-500">
-            {isEmployee ? "Employee" : "Rasko FSM"}
+            {isEmployee ? "Employee" : "Store Owner"}
           </p>
         </div>
       </div>
@@ -336,7 +349,7 @@ export function Sidebar({
               d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
             />
           </svg>
-          Settings
+          Store Settings
         </Link>
       </div>
     </aside>

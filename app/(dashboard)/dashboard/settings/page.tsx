@@ -24,10 +24,10 @@ export default async function SettingsPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
-          Settings
+          Store Settings
         </h1>
         <p className="text-surface-500 mt-1">
-          Manage your store and account settings
+          Manage your store and account configurations to ensure smooth operations and personalized settings
         </p>
       </div>
       <SettingsManager store={store} ownerEmail={user.email || ""} />

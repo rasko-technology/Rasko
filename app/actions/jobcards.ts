@@ -238,3 +238,46 @@ export async function updateJobcardStatus(
   revalidatePath("/dashboard/jobcards");
   return { success: true, message: "Status updated." };
 }
+
+export async function forwardJobcard(
+  jobcardId: number,
+  targetStoreId: number | null,
+  storeName: string,
+  storeAddress: string,
+  storePhone: string,
+): Promise<FormState> {
+  const membership = await requireStore();
+  const supabase = await createStoreClient();
+
+  if (!storeName?.trim()) {
+    return { errors: { store_name: ["Store name is required."] } };
+  }
+
+  const { data, error } = await supabase.rpc("forward_jobcard", {
+    p_jobcard_id: jobcardId,
+    p_source_store_id: membership.store_id,
+    p_target_store_id: targetStoreId,
+    p_target_store_name: storeName.trim(),
+    p_target_store_address: storeAddress?.trim() || null,
+    p_target_store_phone: storePhone?.trim() || null,
+  });
+
+  if (error) {
+    console.error("Forward jobcard failed:", error);
+    return { message: "Failed to forward job card. " + error.message };
+  }
+
+  if (data?.error) {
+    return { message: data.error };
+  }
+
+  revalidatePath("/dashboard/jobcards");
+  return {
+    success: true,
+    message: `Job card forwarded to ${storeName.trim()} successfully!`,
+    data: {
+      forwarded_jobcard_id: data?.forwarded_jobcard_id,
+      target_store_name: data?.target_store_name,
+    },
+  };
+}

@@ -13,10 +13,13 @@ import { createServiceOption } from "@/app/actions/service-options";
 import { useRouter } from "next/navigation";
 import { MultiSelectOptions } from "@/app/components/jobcard/MultiSelectOptions";
 import { ImageUploader } from "@/app/components/jobcard/ImageUploader";
+import { ForwardJobCardDialog } from "@/app/components/jobcard/ForwardJobCardDialog";
 import { ProductSearchInput } from "@/app/components/booking/ProductSearchInput";
 import { BrandSelect } from "@/app/components/booking/BrandSelect";
 import { Dialog } from "@/app/components/ui/Dialog";
 import { LocationPicker } from "@/app/components/booking/LocationPicker";
+import { useCustomerSearch } from "@/app/hooks/use-customers";
+import { useDebouncedValue } from "@/app/hooks/use-debounced-value";
 
 interface ServiceOption {
   id: number;
@@ -88,7 +91,6 @@ export function EditJobCardForm({ jobcard, employees, serviceOptions }: Props) {
 
   // Customer search
   const [customerQuery, setCustomerQuery] = useState("");
-  const [customerResults, setCustomerResults] = useState<CustomerResult[]>([]);
   const [customerOpen, setCustomerOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] =
     useState<CustomerResult | null>(
@@ -102,9 +104,10 @@ export function EditJobCardForm({ jobcard, employees, serviceOptions }: Props) {
         : null,
     );
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
-  const [customerLoading, setCustomerLoading] = useState(false);
   const customerWrapperRef = useRef<HTMLDivElement>(null);
-  const customerDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const debouncedCustomerQuery = useDebouncedValue(customerQuery, 300);
+  const { customers: customerResults, isLoading: customerLoading } =
+    useCustomerSearch(debouncedCustomerQuery);
 
   // New customer dialog
   const [custFormState, custFormAction, custFormPending] = useActionState(
@@ -183,6 +186,10 @@ export function EditJobCardForm({ jobcard, employees, serviceOptions }: Props) {
   const [jobsheetReason, setJobsheetReason] = useState(
     jobcard.jobsheet_not_received_reason || "",
   );
+
+  // Forward dialog
+  const [showForwardDialog, setShowForwardDialog] = useState(false);
+  const isForwarded = jobcard.status === "forwarded";
 
   const allOptions = [...serviceOptions, ...localOptions];
 
@@ -280,39 +287,14 @@ export function EditJobCardForm({ jobcard, employees, serviceOptions }: Props) {
     }
   }, [state, router]);
 
-  // Customer search logic
-  const fetchCustomers = useCallback(async (search: string) => {
-    setCustomerLoading(true);
-    try {
-      const res = await fetch(
-        `/api/customers?search=${encodeURIComponent(search)}`,
-      );
-      const data = await res.json();
-      setCustomerResults(Array.isArray(data) ? data : []);
-      setCustomerOpen(true);
-    } catch {
-      setCustomerResults([]);
-    } finally {
-      setCustomerLoading(false);
-    }
-  }, []);
-
+  // Open dropdown when SWR results arrive
   useEffect(() => {
-    if (customerDebounceRef.current) clearTimeout(customerDebounceRef.current);
-    if (customerQuery.length >= 2) {
-      customerDebounceRef.current = setTimeout(
-        () => fetchCustomers(customerQuery),
-        300,
-      );
-    } else {
-      setCustomerResults([]);
+    if (debouncedCustomerQuery.length >= 2 && customerResults.length > 0) {
+      setCustomerOpen(true);
+    } else if (debouncedCustomerQuery.length < 2) {
       setCustomerOpen(false);
     }
-    return () => {
-      if (customerDebounceRef.current)
-        clearTimeout(customerDebounceRef.current);
-    };
-  }, [customerQuery, fetchCustomers]);
+  }, [customerResults, debouncedCustomerQuery]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -550,6 +532,72 @@ export function EditJobCardForm({ jobcard, employees, serviceOptions }: Props) {
           <input type="hidden" name="receiver_image" value={receiverImageUrl} />
         )}
 
+        
+        {/* ===== Forwarding Info Banner ===== */}
+        {isForwarded && (
+          <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+            <div className="flex items-center gap-2 mb-1">
+              <svg
+                className="w-5 h-5 text-amber-600 dark:text-amber-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+                />
+              </svg>
+              <span className="font-semibold text-sm text-amber-700 dark:text-amber-400">
+                Forwarded
+              </span>
+            </div>
+            <p className="text-sm text-amber-600 dark:text-amber-500">
+              This job card was forwarded to{" "}
+              <strong>{jobcard.forwarded_to_store_name}</strong>
+              {jobcard.forwarded_to_store_address && (
+                <> &middot; {jobcard.forwarded_to_store_address}</>
+              )}
+              {jobcard.forwarded_to_store_phone && (
+                <> &middot; {jobcard.forwarded_to_store_phone}</>
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* ===== Forwarded From Banner ===== */}
+        {jobcard.forwarded_from_store_name && (
+          <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20">
+            <div className="flex items-center gap-2 mb-1">
+              <svg
+                className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859"
+                />
+              </svg>
+              <span className="font-semibold text-sm text-blue-700 dark:text-blue-400">
+                Forwarded from another store
+              </span>
+            </div>
+            <p className="text-sm text-blue-600 dark:text-blue-500">
+              Originally from{" "}
+              <strong>{jobcard.forwarded_from_store_name}</strong>
+              {jobcard.forwarded_from_jobcard_id && (
+                <> (Job Card #{jobcard.forwarded_from_jobcard_id})</>
+              )}
+            </p>
+          </div>
+        )}
+
         {/* ===== Customer Details ===== */}
         <div className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-2xl p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-5 flex items-center gap-2">
@@ -592,8 +640,11 @@ export function EditJobCardForm({ jobcard, employees, serviceOptions }: Props) {
                       value={customerQuery}
                       onChange={(e) => setCustomerQuery(e.target.value)}
                       onFocus={() => {
-                        if (customerQuery.length >= 2)
-                          fetchCustomers(customerQuery);
+                        if (
+                          customerQuery.length >= 2 &&
+                          customerResults.length > 0
+                        )
+                          setCustomerOpen(true);
                       }}
                       autoComplete="off"
                       className={inputClass}
@@ -1367,6 +1418,30 @@ export function EditJobCardForm({ jobcard, employees, serviceOptions }: Props) {
           >
             Cancel
           </a>
+          {!isForwarded && (
+            <button
+              type="button"
+              onClick={() => setShowForwardDialog(true)}
+              className="px-6 py-3 rounded-xl border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-sm font-medium hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+                  />
+                </svg>
+                Forward
+              </span>
+            </button>
+          )}
           <button
             type="submit"
             disabled={pending}
@@ -1644,6 +1719,14 @@ export function EditJobCardForm({ jobcard, employees, serviceOptions }: Props) {
           </div>
         </form>
       </Dialog>
+
+      {/* ===== Forward Job Card Dialog ===== */}
+      <ForwardJobCardDialog
+        open={showForwardDialog}
+        onClose={() => setShowForwardDialog(false)}
+        jobcardId={jobcard.id}
+        jobcardCustomerName={jobcard.customer_name}
+      />
     </>
   );
 }

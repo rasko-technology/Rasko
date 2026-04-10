@@ -7,7 +7,7 @@ import {
   useCallback,
   useActionState,
 } from "react";
-import { createLead } from "@/app/actions/leads";
+import { updateLead } from "@/app/actions/leads";
 import { createCustomer } from "@/app/actions/customers";
 import { useRouter } from "next/navigation";
 import { ProductSearchInput } from "@/app/components/booking/ProductSearchInput";
@@ -36,7 +36,31 @@ interface ProductRow {
   brandOptions: string[];
 }
 
+interface Lead {
+  id: number;
+  customer_id: number;
+  customers: CustomerResult | null;
+  user_type: string | null;
+  incoming_source: string | null;
+  advance_amount: number | null;
+  priority: string;
+  booking_date_time: string | null;
+  payment_mode: string | null;
+  product_requirements: Array<{
+    product_name: string;
+    brand_name: string;
+    model: string;
+    configuration: string;
+    qty: number;
+    referral_link: string;
+  }> | null;
+  notes: string | null;
+  assigned_to: number | null;
+  status: string;
+}
+
 interface Props {
+  lead: Lead;
   employees: { id: number; name: string }[];
 }
 
@@ -85,9 +109,9 @@ const emptyRow: ProductRow = {
   brandOptions: [],
 };
 
-export function CreateLeadForm({ employees }: Props) {
+export function EditLeadForm({ lead, employees }: Props) {
   const router = useRouter();
-  const [state, action, pending] = useActionState(createLead, undefined);
+  const [state, action, pending] = useActionState(updateLead, undefined);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -97,7 +121,17 @@ export function CreateLeadForm({ employees }: Props) {
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerOpen, setCustomerOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] =
-    useState<CustomerResult | null>(null);
+    useState<CustomerResult | null>(
+      lead.customers
+        ? {
+            id: lead.customers.id,
+            name: lead.customers.name,
+            phone: lead.customers.phone,
+            address: lead.customers.address,
+            city: lead.customers.city,
+          }
+        : null,
+    );
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const customerWrapperRef = useRef<HTMLDivElement>(null);
   const debouncedCustomerQuery = useDebouncedValue(customerQuery, 300);
@@ -115,14 +149,25 @@ export function CreateLeadForm({ employees }: Props) {
   const [custFullAddress, setCustFullAddress] = useState("");
 
   // Product requirements rows
-  const [productRows, setProductRows] = useState<ProductRow[]>([
-    { ...emptyRow },
-  ]);
+  const initialRows: ProductRow[] =
+    lead.product_requirements && lead.product_requirements.length > 0
+      ? lead.product_requirements.map((p) => ({
+          product_name: p.product_name || "",
+          brand_name: p.brand_name || "",
+          model: p.model || "",
+          configuration: p.configuration || "",
+          qty: p.qty || 1,
+          referral_link: p.referral_link || "",
+          service_item_id: null,
+          brandOptions: p.brand_name ? [p.brand_name] : [],
+        }))
+      : [{ ...emptyRow }];
+  const [productRows, setProductRows] = useState<ProductRow[]>(initialRows);
 
   // Redirect on success
   useEffect(() => {
     if (state?.success) {
-      setToast({ message: state.message || "Lead created!", type: "success" });
+      setToast({ message: state.message || "Lead updated!", type: "success" });
       const timer = setTimeout(() => router.push("/dashboard/leads"), 1500);
       return () => clearTimeout(timer);
     } else if (state?.message && !state?.success) {
@@ -197,7 +242,7 @@ export function CreateLeadForm({ employees }: Props) {
         )?.set?.call(input, value);
         input.dispatchEvent(new Event("input", { bubbles: true }));
       };
-      const form = document.getElementById("lead-new-customer-form");
+      const form = document.getElementById("edit-lead-customer-form");
       if (!form) return;
       const addressInput = form.querySelector<HTMLInputElement>(
         'input[name="address"]',
@@ -239,6 +284,10 @@ export function CreateLeadForm({ employees }: Props) {
       prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
     );
   };
+
+  const bookingDateDefault = lead.booking_date_time
+    ? new Date(lead.booking_date_time).toISOString().slice(0, 16)
+    : "";
 
   return (
     <>
@@ -307,6 +356,7 @@ export function CreateLeadForm({ employees }: Props) {
 
       <form action={action} className="space-y-6">
         {/* Hidden fields */}
+        <input type="hidden" name="lead_id" value={lead.id} />
         {selectedCustomer && (
           <input type="hidden" name="customer_id" value={selectedCustomer.id} />
         )}
@@ -416,7 +466,7 @@ export function CreateLeadForm({ employees }: Props) {
                         </p>
                         <p className="text-xs text-surface-400">
                           {c.phone || "No phone"}
-                          {c.address ? ` \u00b7 ${c.address}` : ""}
+                          {c.address ? ` · ${c.address}` : ""}
                         </p>
                       </button>
                     ))
@@ -491,7 +541,7 @@ export function CreateLeadForm({ employees }: Props) {
                 name="booking_date_time"
                 type="datetime-local"
                 required
-                defaultValue={new Date().toISOString().slice(0, 16)}
+                defaultValue={bookingDateDefault}
                 className={inputClass}
               />
             </div>
@@ -503,7 +553,12 @@ export function CreateLeadForm({ employees }: Props) {
               <label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1.5">
                 User Type <span className="text-danger">*</span>
               </label>
-              <select name="user_type" required className={selectClass}>
+              <select
+                name="user_type"
+                required
+                defaultValue={lead.user_type || ""}
+                className={selectClass}
+              >
                 <option value="">Select</option>
                 {USER_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -518,7 +573,12 @@ export function CreateLeadForm({ employees }: Props) {
               <label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1.5">
                 Payment Mode <span className="text-danger">*</span>
               </label>
-              <select name="payment_mode" required className={selectClass}>
+              <select
+                name="payment_mode"
+                required
+                defaultValue={lead.payment_mode || ""}
+                className={selectClass}
+              >
                 <option value="">Select</option>
                 {PAYMENT_MODES.map((m) => (
                   <option key={m} value={m}>
@@ -533,7 +593,12 @@ export function CreateLeadForm({ employees }: Props) {
               <label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1.5">
                 Incoming Source <span className="text-danger">*</span>
               </label>
-              <select name="incoming_source" required className={selectClass}>
+              <select
+                name="incoming_source"
+                required
+                defaultValue={lead.incoming_source || ""}
+                className={selectClass}
+              >
                 <option value="">Select</option>
                 {INCOMING_SOURCES.map((s) => (
                   <option key={s} value={s}>
@@ -553,6 +618,7 @@ export function CreateLeadForm({ employees }: Props) {
                 type="number"
                 step="0.01"
                 min="0"
+                defaultValue={lead.advance_amount ?? ""}
                 className={inputClass}
                 placeholder="&#x20B9;0.00"
               />
@@ -741,7 +807,7 @@ export function CreateLeadForm({ employees }: Props) {
               <select
                 name="priority"
                 required
-                defaultValue=""
+                defaultValue={lead.priority}
                 className={selectClass}
               >
                 <option value="" disabled>
@@ -757,7 +823,12 @@ export function CreateLeadForm({ employees }: Props) {
               <label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1.5">
                 Assigned To <span className="text-danger">*</span>
               </label>
-              <select name="assigned_to" required className={selectClass}>
+              <select
+                name="assigned_to"
+                required
+                defaultValue={lead.assigned_to ?? ""}
+                className={selectClass}
+              >
                 <option value="">Select</option>
                 {employees.map((e) => (
                   <option key={e.id} value={e.id}>
@@ -772,6 +843,7 @@ export function CreateLeadForm({ employees }: Props) {
               </label>
               <input
                 name="notes"
+                defaultValue={lead.notes || ""}
                 className={inputClass}
                 placeholder="Additional notes..."
               />
@@ -786,7 +858,7 @@ export function CreateLeadForm({ employees }: Props) {
             disabled={pending}
             className="px-8 py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold transition-all shadow-lg shadow-primary-600/20 disabled:opacity-50 cursor-pointer"
           >
-            {pending ? "Creating..." : "Submit"}
+            {pending ? "Saving..." : "Update Lead"}
           </button>
         </div>
       </form>
@@ -807,7 +879,7 @@ export function CreateLeadForm({ employees }: Props) {
           </div>
         )}
         <form
-          id="lead-new-customer-form"
+          id="edit-lead-customer-form"
           action={custFormAction}
           className="space-y-4"
         >
@@ -906,77 +978,38 @@ export function CreateLeadForm({ employees }: Props) {
               />
             </div>
           </div>
-
-          {/* Location Picker */}
-          <div>
+          {custAddressLat && (
+            <>
+              <input type="hidden" name="address_lat" value={custAddressLat} />
+              <input type="hidden" name="address_lng" value={custAddressLng!} />
+              <input
+                type="hidden"
+                name="full_address"
+                value={custFullAddress}
+              />
+            </>
+          )}
+          <div className="flex items-center justify-between pt-2">
             <button
               type="button"
-              onClick={() => setShowCustMap(!showCustMap)}
-              className="inline-flex items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline cursor-pointer"
+              onClick={() => setShowCustMap((v) => !v)}
+              className="text-sm text-primary-600 dark:text-primary-400 hover:underline cursor-pointer"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"
-                />
-              </svg>
-              {showCustMap ? "Hide Map" : "Pick location on Google Maps"}
-            </button>
-            {showCustMap && (
-              <div className="mt-3">
-                <LocationPicker onLocationSelect={handleCustLocationSelect} />
-              </div>
-            )}
-          </div>
-
-          {custAddressLat && custAddressLng && (
-            <input type="hidden" name="address_lat" value={custAddressLat} />
-          )}
-          {custAddressLat && custAddressLng && (
-            <input type="hidden" name="address_lng" value={custAddressLng} />
-          )}
-          {custFullAddress && (
-            <input type="hidden" name="full_address" value={custFullAddress} />
-          )}
-
-          <div className="flex justify-end gap-3 pt-2 border-t border-surface-200 dark:border-surface-800">
-            <button
-              type="button"
-              onClick={() => {
-                setShowCustomerDialog(false);
-                setShowCustMap(false);
-              }}
-              className="px-4 py-2.5 rounded-lg border border-surface-200 dark:border-surface-700 text-sm font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
-            >
-              Cancel
+              {showCustMap ? "Hide Map" : "Pick Location on Map"}
             </button>
             <button
               type="submit"
               disabled={custFormPending}
-              className="px-6 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer"
             >
-              {custFormPending ? (
-                <span className="flex items-center gap-2">
-                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Creating...
-                </span>
-              ) : (
-                "Create Customer"
-              )}
+              {custFormPending ? "Creating..." : "Create Customer"}
             </button>
           </div>
+          {showCustMap && (
+            <div className="mt-3">
+              <LocationPicker onLocationSelect={handleCustLocationSelect} />
+            </div>
+          )}
         </form>
       </Dialog>
     </>

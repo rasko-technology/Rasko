@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { EyeOff, Eye } from "lucide-react";
 
 interface Employee {
   id: number;
@@ -25,6 +26,7 @@ export function EmployeeList({
     success?: boolean;
   }>({});
   const [pending, setPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Edit state
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -161,7 +163,7 @@ export function EmployeeList({
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <input
                 name="name"
                 placeholder="Full name"
@@ -174,18 +176,27 @@ export function EmployeeList({
                 required
                 className="px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white placeholder-surface-400 focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
               />
+              <div className="relative">
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  required
+                  className="w-full px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white placeholder-surface-400 focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <input
-                name="password"
-                type="password"
-                placeholder="Password"
-                required
-                className="px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white placeholder-surface-400 focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
-              />
-              <input
                 name="phone"
-                placeholder="Phone (optional)"
+                placeholder="Phone"
                 className="px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white placeholder-surface-400 focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
               />
               <input
@@ -427,14 +438,14 @@ export function EmployeeList({
       </div>
 
       {/* Info box */}
-      <div className="mt-6 p-4 rounded-xl bg-primary-50 dark:bg-primary-500/5 border border-primary-200 dark:border-primary-500/20">
+      {/* <div className="mt-6 p-4 rounded-xl bg-primary-50 dark:bg-primary-500/5 border border-primary-200 dark:border-primary-500/20">
         <p className="text-sm text-primary-700 dark:text-primary-300">
           <strong>Store Code:</strong>{" "}
           <span className="font-mono">{storeId}</span> — Share this with your
           employees so they can log in at{" "}
           <span className="font-mono">/employee/login</span>
         </p>
-      </div>
+      </div> */}
     </div>
   );
 }
