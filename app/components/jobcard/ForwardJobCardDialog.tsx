@@ -44,7 +44,7 @@ export function ForwardJobCardDialog({
     message: string;
     type: "success" | "error";
   } | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Search stores with debounce

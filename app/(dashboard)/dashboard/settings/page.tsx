@@ -14,11 +14,14 @@ export default async function SettingsPage() {
   if (!membership) redirect("/onboarding");
 
   const supabase = await createClient();
-  const { data: store } = await supabase
-    .from("stores")
-    .select("*")
-    .eq("id", membership.store_id)
-    .single();
+  const [{ data: store }, { data: subscription }] = await Promise.all([
+    supabase.from("stores").select("*").eq("id", membership.store_id).single(),
+    supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("store_id", membership.store_id)
+      .single(),
+  ]);
 
   return (
     <div>
@@ -27,10 +30,15 @@ export default async function SettingsPage() {
           Store Settings
         </h1>
         <p className="text-surface-500 mt-1">
-          Manage your store and account configurations to ensure smooth operations and personalized settings
+          Manage your store and account configurations to ensure smooth
+          operations and personalized settings
         </p>
       </div>
-      <SettingsManager store={store} ownerEmail={user.email || ""} />
+      <SettingsManager
+        store={store}
+        ownerEmail={user.email || ""}
+        subscription={subscription}
+      />
     </div>
   );
 }

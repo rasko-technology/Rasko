@@ -5,6 +5,7 @@ import { updateStore, updateOwnerProfile } from "@/app/actions/settings";
 import { Camera, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { SubscriptionManager } from "./SubscriptionManager";
 import { LocationPicker } from "@/app/components/booking/LocationPicker";
 
 const RichTextEditor = dynamic(
@@ -13,7 +14,7 @@ const RichTextEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[340px] rounded-lg bg-surface-50 dark:bg-surface-800 animate-pulse" />
+      <div className="h-85 rounded-lg bg-surface-50 dark:bg-surface-800 animate-pulse" />
     ),
   },
 );
@@ -47,14 +48,33 @@ interface Store {
 const inputClass =
   "w-full px-4 py-2.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-white placeholder-surface-400 focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500";
 
-type SettingsTab = "store" | "bank_details" | "general_terms" | "account";
+type SettingsTab =
+  | "store"
+  | "bank_details"
+  | "general_terms"
+  | "account"
+  | "subscription";
 
 export function SettingsManager({
   store,
   ownerEmail,
+  subscription = null,
 }: {
   store: Store | null;
   ownerEmail: string;
+  subscription?: {
+    id: number;
+    store_id: number;
+    plan: string;
+    status: string;
+    plan_amount: number | null;
+    plan_interval: string | null;
+    current_period_start: string | null;
+    current_period_end: string | null;
+    trial_end_date: string | null;
+    cashfree_subscription_id: string | null;
+    cancelled_at: string | null;
+  } | null;
 }) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("store");
   const [showPassword, setShowPassword] = useState(false);
@@ -157,6 +177,7 @@ export function SettingsManager({
     { id: "store" as const, label: "Store Details" },
     { id: "bank_details" as const, label: "Bank Details" },
     { id: "general_terms" as const, label: "General Terms" },
+    { id: "subscription" as const, label: "Subscription" },
     { id: "account" as const, label: "Account" },
   ];
 
@@ -707,6 +728,10 @@ export function SettingsManager({
             </button>
           </form>
         </div>
+      )}
+      {/* Subscription Tab */}
+      {activeTab === "subscription" && (
+        <SubscriptionManager subscription={subscription} />
       )}
     </div>
   );

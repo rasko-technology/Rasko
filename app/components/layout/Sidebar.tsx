@@ -265,7 +265,7 @@ export function Sidebar({
     <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-surface-200 dark:border-surface-800">
-        <div className="w-9 h-9 rounded-xl border-2 border-black dark:border-white flex items-center justify-center bg-primary-50">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-blue-600">
           {storeLogo ? (
             <Image
               src={storeLogo}
@@ -275,7 +275,7 @@ export function Sidebar({
               height={36}
             />
           ) : (
-            <span className="text-white font-bold text-sm">R</span>
+            <span className="text-white font-bold text-sm">{storeName.charAt(0).toUpperCase()}</span>
           )}
         </div>
         <div className="min-w-0">

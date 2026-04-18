@@ -39,12 +39,20 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes that don't need auth
-  const publicRoutes = ["/login", "/signup", "/employee/login", "/api/auth"];
+  const publicRoutes = [
+    "/login",
+    "/signup",
+    "/employee/login",
+    "/api/auth",
+    "/api/webhooks",
+    "/privacy",
+    "/terms",
+  ];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route),
   );
 
-  // Root path — redirect based on auth state
+  // Root path — redirect authenticated users to dashboard, guests see landing page
   if (pathname === "/") {
     if (user) {
       const url = request.nextUrl.clone();
@@ -58,9 +66,8 @@ export async function proxy(request: NextRequest) {
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+    // Unauthenticated — serve the landing page
+    return supabaseResponse;
   }
 
   // Protect dashboard routes (allow both owner and employee sessions)

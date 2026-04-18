@@ -96,7 +96,7 @@ export function Topbar({
             onClick={() => setShowMenu(!showMenu)}
             className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
           >
-            <div className="w-9 h-9 rounded-full border-2 border-black dark:border-white flex items-center justify-center bg-primary-50">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center bg-blue-600">
               {storeLogo ? (
                 <Image
                   src={storeLogo}
